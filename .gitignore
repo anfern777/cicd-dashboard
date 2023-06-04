@@ -25,3 +25,6 @@ postgres-data
 
 # Secrets file
 .env
+
+# binaries
+app
