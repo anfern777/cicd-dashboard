@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/anfern777/cicd-dashboard/controller"
+	"github.com/anfern777/cicd-dashboard/entity"
 	"github.com/anfern777/cicd-dashboard/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -22,6 +23,11 @@ func DatabaseConnect (dsn url.URL) gin.HandlerFunc {
 	}else{
 		fmt.Println("Database: Connection Successful")
 	}
+	// Auto migrate and update schemas
+	db.AutoMigrate(&entity.User{}, &entity.SourceCodeHostIntegration{}, &entity.CloudProviderIntegration{})
+	fmt.Println("Database: Schema Update Successful")
+
+	// db.Create(&User{Email: "test@email.com", Privilege: Guest, Password: "test123"})
   
 	return func (c *gin.Context) {
 	  c.Set ("DB", db)
@@ -46,12 +52,6 @@ func main() {
 
 	router := gin.Default()
 	router.Use(DatabaseConnect(dsn))
-
-
-	// Auto migrate and update schemas
-	// db.AutoMigrate(&User{}, &SourceCodeHostIntegration{}, &CloudProviderIntegration{})
-
-	// db.Create(&User{Email: "test@email.com", Privilege: Guest, Password: "test123"})
 
 	var(
 		userService service.UserService = service.NewUserService()
