@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+# Docker volume folders
+postgres-data
+
+# Secrets file
+.env
