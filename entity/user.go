@@ -3,15 +3,10 @@ package entity
 import "gorm.io/gorm"
 
 type Role string
-const(
-	Guest Role = "Guest"
-	Admin Role = "Admin"
-)
 
 type User struct {
 	gorm.Model
-	Privilege Role `json:"privilege"`
-	Email string `json:"email"`
+	Role     Role   `binding:"required" validate:"is-role"`
+	Email    string `binding:"required,email" gorm:"unique"`
 	Password string `json:"-"`
 }
-

@@ -3,13 +3,14 @@ package entity
 import "gorm.io/gorm"
 
 type CloudProvider string
-const (		
+
+const (
 	AWS CloudProvider = "AWS"
 )
 
 type CloudProviderIntegration struct {
 	gorm.Model
-	Provider CloudProvider `json:"provider"`
-	Key string `json:"key"`
-	Secret string `json:"-"`
+	Provider CloudProvider `validate:"required"`
+	Key      string
+	Secret   string `json:"-"`
 }

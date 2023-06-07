@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/anfern777/cicd-dashboard/controller"
-	"github.com/anfern777/cicd-dashboard/entity"
+	middleware "github.com/anfern777/cicd-dashboard/middleware"
 	"github.com/anfern777/cicd-dashboard/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -16,92 +16,117 @@ import (
 	"gorm.io/gorm"
 )
 
-func DatabaseConnect (dsn url.URL) gin.HandlerFunc {
-	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}else{
-		fmt.Println("Database: Connection Successful")
-	}
-	// Auto migrate and update schemas
-	db.AutoMigrate(&entity.User{}, &entity.SourceCodeHostIntegration{}, &entity.CloudProviderIntegration{})
-	fmt.Println("Database: Schema Update Successful")
-
-	// db.Create(&User{Email: "test@email.com", Privilege: Guest, Password: "test123"})
-  
-	return func (c *gin.Context) {
-	  c.Set ("DB", db)
-	  c.Next ()
-	}
-  }
-
 func main() {
 
 	err := godotenv.Load(".env")
 	if err != nil {
-        log.Fatalf("Error loading .env file")
-    }
+		log.Fatalf("Error loading .env file")
+	}
 
 	dsn := url.URL{
-		User: url.UserPassword(os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD")),
-		Scheme: "postgres",
-		Host: fmt.Sprintf("%s:%s", os.Getenv("DB_SERVER"), os.Getenv("DB_PORT")),
-		Path: os.Getenv("DB_NAME"),
+		User:     url.UserPassword(os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD")),
+		Scheme:   "postgres",
+		Host:     fmt.Sprintf("%s:%s", os.Getenv("DB_SERVER"), os.Getenv("DB_PORT")),
+		Path:     os.Getenv("DB_NAME"),
 		RawQuery: (&url.Values{"sslmode": []string{"disable"}}).Encode(),
+	}
+	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("Database: Connection Successful")
 	}
 
 	router := gin.Default()
-	router.Use(DatabaseConnect(dsn))
+	router.Use(
+		middleware.DatabaseConnect(db),
+		// middleware.BasicAuth(db),
+	)
 
-	var(
-		userService service.UserService = service.NewUserService()
+	var (
+		userService    service.UserService       = service.NewUserService()
 		userController controller.UserController = controller.NewUserController(userService)
 
-		schiService service.SchiService = service.NewSchiService()
+		schiService    service.SchiService       = service.NewSchiService()
 		schiController controller.SchiController = controller.NewSchiController(schiService)
 
-		cpiService service.CpiService = service.NewCpiService()
+		cpiService    service.CpiService       = service.NewCpiService()
 		cpiController controller.CpiController = controller.NewCpiController(cpiService)
 	)
 
 	router.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "%s", "pong")
 	})
-	
+
 	users := router.Group("/user")
 	{
 		users.GET("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, userController.FindAll(ctx))
+			users, err := userController.FindAll(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, users)
+			}
 		})
 
 		users.GET("/:email", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK,userController.FindByEmail(ctx, ctx.Param("email")))
+			user, err := userController.FindByEmail(ctx, ctx.Param("email"))
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, user)
+			}
 		})
 
 		users.POST("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, userController.Save(ctx))
+			err := userController.Save(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, gin.H{"message": "User submitted successfuly"})
+			}
 		})
 	}
 
 	schis := router.Group("/schi")
 	{
 		schis.GET("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, schiController.FindAll(ctx))
+			schis, err := schiController.FindAll(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, schis)
+			}
 		})
 
 		schis.POST("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, schiController.Save(ctx))
+			err := schiController.Save(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, gin.H{"message": "SCHI submitted successfuly"})
+			}
 		})
 	}
 
 	cpis := router.Group("/cpi")
 	{
 		cpis.GET("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, cpiController.FindAll(ctx))
+			cpis, err := cpiController.FindAll(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, cpis)
+			}
 		})
 
 		cpis.POST("/", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, cpiController.Save(ctx))
+			err := cpiController.Save(ctx)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			} else {
+				ctx.JSON(http.StatusOK, gin.H{"message": "CPI submitted successfuly"})
+			}
 		})
 	}
 

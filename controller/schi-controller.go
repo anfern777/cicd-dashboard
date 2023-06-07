@@ -7,8 +7,8 @@ import (
 )
 
 type SchiController interface {
-	FindAll(*gin.Context) []entity.SourceCodeHostIntegration
-	Save(*gin.Context) entity.SourceCodeHostIntegration
+	FindAll(*gin.Context) ([]entity.SourceCodeHostIntegration, error)
+	Save(*gin.Context) error
 }
 
 type schiController struct {
@@ -21,14 +21,18 @@ func NewSchiController(service service.SchiService) SchiController {
 	}
 }
 
-func (controller *schiController) FindAll(ctx *gin.Context) []entity.SourceCodeHostIntegration {
-	schis, _ := controller.service.FindAll(ctx)
-	return schis
+func (controller *schiController) FindAll(ctx *gin.Context) ([]entity.SourceCodeHostIntegration, error) {
+	schis, err := controller.service.FindAll(ctx)
+	return schis, err
 }
 
-func (controller *schiController) Save(ctx *gin.Context) entity.SourceCodeHostIntegration {
+func (controller *schiController) Save(ctx *gin.Context) error {
 	var user entity.SourceCodeHostIntegration
-	ctx.BindJSON(&user)
-	controller.service.Save(ctx, user)
-	return user
+	err := ctx.ShouldBindJSON(&user)
+	if err != nil {
+		return err
+	}
+
+	err = controller.service.Save(ctx, user)
+	return err
 }
