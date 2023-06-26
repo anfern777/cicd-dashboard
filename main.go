@@ -40,7 +40,6 @@ func main() {
 	router := gin.Default()
 	router.Use(
 		middleware.DatabaseConnect(db),
-		// middleware.BasicAuth(db),
 	)
 
 	var (
@@ -58,7 +57,27 @@ func main() {
 		c.String(http.StatusOK, "%s", "pong")
 	})
 
+	router.GET("/auth", func(ctx *gin.Context) {
+		email, password, _ := ctx.Request.BasicAuth()
+		user, err := userService.FindByEmail(ctx, email)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+		err = userService.CheckPassword(user, password)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+		token, err := userService.JwtGenerateToken(user.Email)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else {
+			ctx.JSON(http.StatusOK, token)
+		}
+	})
+
 	users := router.Group("/user")
+	users.Use(middleware.JwtValidate())
 	{
 		users.GET("/", func(ctx *gin.Context) {
 			users, err := userController.FindAll(ctx)
@@ -89,6 +108,7 @@ func main() {
 	}
 
 	schis := router.Group("/schi")
+	schis.Use(middleware.JwtValidate())
 	{
 		schis.GET("/", func(ctx *gin.Context) {
 			schis, err := schiController.FindAll(ctx)
@@ -110,6 +130,7 @@ func main() {
 	}
 
 	cpis := router.Group("/cpi")
+	cpis.Use(middleware.JwtValidate())
 	{
 		cpis.GET("/", func(ctx *gin.Context) {
 			cpis, err := cpiController.FindAll(ctx)
