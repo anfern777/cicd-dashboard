@@ -21,7 +21,7 @@ type UserService interface {
 	HashPassword(string) (string, error)
 
 	JwtGenerateToken(email string) (string, error)
-	JwtValidateToken(string) error
+	JwtValidateToken(tknStr string) (jwt.Claims, error)
 
 	GetAllUserRoles() []string
 }
@@ -89,20 +89,20 @@ func (service *userService) JwtGenerateToken(email string) (string, error) {
 	return token.SignedString([]byte(os.Getenv("JWT_KEY")))
 }
 
-func (service *userService) JwtValidateToken(tknStr string) error {
+func (service *userService) JwtValidateToken(tknStr string) (jwt.Claims, error) {
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_KEY")), nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			return errors.New("invalid token signature")
+			return nil, errors.New("invalid token signature")
 		}
-		return errors.New("could not parse token")
+		return nil, errors.New("could not parse token")
 	}
 	if !tkn.Valid {
-		return errors.New("invalid token")
+		return nil, errors.New("invalid token")
 	}
 
-	return nil
+	return claims, nil
 }

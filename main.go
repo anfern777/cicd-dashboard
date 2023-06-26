@@ -77,7 +77,7 @@ func main() {
 	})
 
 	users := router.Group("/user")
-	users.Use(middleware.JwtValidate())
+	users.Use(middleware.JwtValidate(), middleware.RequireRole("admin"))
 	{
 		users.GET("/", func(ctx *gin.Context) {
 			users, err := userController.FindAll(ctx)
