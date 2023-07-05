@@ -21,7 +21,7 @@ type UserService interface {
 	HashPassword(string) (string, error)
 
 	JwtGenerateToken(email string) (string, error)
-	JwtValidateToken(tknStr string) (jwt.Claims, error)
+	JwtValidateToken(tknStr string) (*Claims, error)
 
 	GetAllUserRoles() []string
 }
@@ -44,19 +44,19 @@ func (service *userService) Save(ctx *gin.Context, user entity.User) error {
 		return err
 	}
 	user.Password = hashedPassword
-	session := getDB(ctx).Session(&gorm.Session{FullSaveAssociations: true})
+	session := GetDB(ctx).Session(&gorm.Session{FullSaveAssociations: true})
 	return session.Save(&user).Error
 }
 
 func (service *userService) FindAll(ctx *gin.Context) ([]entity.User, error) {
 	var users []entity.User
-	err := getDB(ctx).Find(&users).Error
+	err := GetDB(ctx).Find(&users).Error
 	return users, err
 }
 
 func (service *userService) FindByEmail(ctx *gin.Context, email string) (entity.User, error) {
 	var user entity.User
-	err := getDB(ctx).Where("email = ?", email).First(&user).Error
+	err := GetDB(ctx).Where("email = ?", email).First(&user).Error
 	return user, err
 }
 
@@ -89,7 +89,7 @@ func (service *userService) JwtGenerateToken(email string) (string, error) {
 	return token.SignedString([]byte(os.Getenv("JWT_KEY")))
 }
 
-func (service *userService) JwtValidateToken(tknStr string) (jwt.Claims, error) {
+func (service *userService) JwtValidateToken(tknStr string) (*Claims, error) {
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_KEY")), nil
